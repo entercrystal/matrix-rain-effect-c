@@ -226,6 +226,7 @@ int main() {
     free(velocities);
     free(heads);
     free(tails);
-
+    
+    ClearConsole();
     return 0;
 }
