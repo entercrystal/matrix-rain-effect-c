@@ -1,15 +1,15 @@
+// The Matrix Rain Effect Generator
+// by entercrystal, Jan. 2026
+
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <windows.h>
 #include <stdbool.h>
+#include "tools.h"
 
 #define PRINT_CHAR "*"
-#define EMPTY_CHAR " "
-#define LINE_BREAK_CHAR "\n"
-
-#define ROWS 45 // 27
-#define COLUMNS 156 // 220
+#define LINE_BREAK_CHAR '\n'
+#define RANDOM_CHARACTERS true // true = random characters insteada of print_char, false = print_char only
 
 // #define CLEAR_CHARACTER "\033[H"
 
@@ -27,6 +27,15 @@
 #define LENGTH_MIN 6
 #define LENGTH_MAX 11
 
+#define HEAD_FRAMES_MIN 2.0f
+#define HEAD_FRAMES_MAX 5.0f
+
+#define DROP_VELOCITY_MIN 3.0f // min velocity (higher = faster)
+#define DROP_VELOCITY_MAX 17.5f // max velocity (higher = faster)
+
+#define SPEED_CHANGE_CHANCE_ENABLED true
+#define SPEED_CHANGE_CHANCE 500 // 1 in X chance per frame of receiving a speed increase for each drop
+
 int ranint(int min, int max) {
     if (min > max) return -1;
     if (min == max) return min;
@@ -39,22 +48,9 @@ float ranfloat(float min, float max) {
     return min + (max - min) * (rand() / (float) RAND_MAX);
 }
 
-void enable_ansi() {
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD dwMode = 0;
-    GetConsoleMode(hOut, &dwMode);
-    dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-    SetConsoleMode(hOut, dwMode);
-
-    CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(hOut, &cursorInfo);
-    cursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(hOut, &cursorInfo);
-}
-
 int main() {
     setvbuf(stdout, NULL, _IONBF, 0); // disable stdout buffering
-    system("cls");
+    ClearConsole();
     
     printf("Green Modern Matrix Rain Effect Generator\nEnter a valid seed (integer, 0 for default): ");
     
@@ -69,40 +65,73 @@ int main() {
     printf("Seed: %d\nPress ctrl + c to terminate any time\n", seed_);
 
     system("pause");
-    system("cls");
+    ClearConsole();
 
-    int velocities[COLUMNS];
-    static float heads[COLUMNS]; // static float so it's zero-initialised
-    static float tails[COLUMNS]; // static float again
+    int COLUMNS, ROWS;
+    if (!GetConsoleSize(&ROWS, &COLUMNS)) {
+        printf("Could not resolve console size...\n");
+        return 1;
+    }
+
+    int *velocities = malloc(sizeof(int) * COLUMNS);
+    float *heads = calloc(COLUMNS, sizeof(float));
+    float *tails = calloc(COLUMNS, sizeof(float)); // calloc so they are zero-initialized
 
     for (int column = 0; column < COLUMNS; column++) {
-        velocities[column] = ranint(3, 15);
-        heads[column] = -ranint(2, 5);
+        velocities[column] = ranint(DROP_VELOCITY_MIN, DROP_VELOCITY_MAX);
+        heads[column] = -ranfloat(HEAD_FRAMES_MIN, HEAD_FRAMES_MAX);
         tails[column] = heads[column] - ranint(LENGTH_MIN, LENGTH_MAX);
     }
 
-    enable_ansi();
+    EnableANSI();
     float delta = REFRESH_SPEED / 1000.0f * 3.0f;
 
-    const int frame_size = ROWS * COLUMNS * 300 + ROWS + 1;
+    const int frame_size = ROWS * COLUMNS * 75 + ROWS + 1;
     
     char *frame = malloc(frame_size); // + 1 for the null terminator
     frame[0] = '\0'; // initialise as empty string
 
     while (true) {
+        const int old_rows = ROWS, old_columns = COLUMNS;
+
+        if (!GetConsoleSize(&ROWS, &COLUMNS)) {
+            printf("Failed to get console size...\n");
+            break;
+        }
+
+        if (old_rows != ROWS || old_columns != COLUMNS) {
+            free(velocities);
+            free(heads);
+            free(tails);
+
+            velocities = malloc(sizeof(int) * COLUMNS);
+            heads = calloc(COLUMNS, sizeof(float));
+            tails = calloc(COLUMNS, sizeof(float)); // calloc so they are zero-initialized
+
+            for (int column = 0; column < COLUMNS; column++) {
+                velocities[column] = ranfloat(DROP_VELOCITY_MIN, DROP_VELOCITY_MAX);
+                heads[column] = -ranfloat(HEAD_FRAMES_MIN, HEAD_FRAMES_MAX);
+                tails[column] = heads[column] - ranint(LENGTH_MIN, LENGTH_MAX);
+            }
+            
+            frame[0] = '\0'; // initialise as empty string
+            ClearConsole();
+        }
+
         char *p = frame;
         *p = '\0';
 
         for (int column = 0; column < COLUMNS; column++) {
-            if (ranint(1, 500) == 1) velocities[column]++;
+            if (SPEED_CHANGE_CHANCE_ENABLED && ranint(1, SPEED_CHANGE_CHANCE) == 1) velocities[column]++; // 1 in x chance to increase speed randomly (per drop) if functionality is enabled
             const float vel = velocities[column] * delta;
 
-            heads[column] += vel;
+            heads[column] += vel; // update positions according to velocity and delta time
             tails[column] += vel;
 
             if (heads[column] < 0 && tails[column] < 0) continue; // the head and tail are out of bounds, so we skip it completely
             if (heads[column] > ROWS - 1 && tails[column] > ROWS - 1) {
-                heads[column] = -ranfloat(4.0f, 8.0f);
+                velocities[column] = ranfloat(DROP_VELOCITY_MIN, DROP_VELOCITY_MAX);
+                heads[column] = -ranfloat(HEAD_FRAMES_MIN, HEAD_FRAMES_MAX);
                 tails[column] = heads[column] - ranint(LENGTH_MIN, LENGTH_MAX);
                 continue;
             } // reset and skipped as the drop is out of bounds
@@ -128,6 +157,11 @@ int main() {
                     else if (row == tpos + 4) character = -1;
                     else character = 1;
                 }
+
+                char USE_CHAR[3];
+                
+                if (RANDOM_CHARACTERS) sprintf(USE_CHAR, "%c", (char)ranint(33, 126));
+                else sprintf(USE_CHAR, "%s", PRINT_CHAR);
                 
                 switch (character) {
                     /* CODES:
@@ -144,31 +178,31 @@ int main() {
                     */
 
                     case 1:
-                        p += sprintf(p, "%s%s%s", BRIGHT_GREEN, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", BRIGHT_GREEN, USE_CHAR, RESET);
                         break;
 
                     case 2:
-                        p += sprintf(p, "%s%s%s", WHITE, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", WHITE, USE_CHAR, RESET);
                         break;
 
                     case 3:
-                        p += sprintf(p, "%s%s%s", BLACK, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", BLACK, USE_CHAR, RESET);
                         break;
 
                     case -1:
-                        p += sprintf(p, "%s%s%s", GREEN1, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", GREEN1, USE_CHAR, RESET);
                         break;
 
                     case -2:
-                        p += sprintf(p, "%s%s%s", GREEN2, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", GREEN2, USE_CHAR, RESET);
                         break;
 
                     case -3:
-                        p += sprintf(p, "%s%s%s", GREEN3, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", GREEN3, USE_CHAR, RESET);
                         break;
 
                     case -4:
-                        p += sprintf(p, "%s%s%s", GREEN4, PRINT_CHAR, RESET);
+                        p += sprintf(p, "%s%s%s", GREEN4, USE_CHAR, RESET);
                         break;
 
                     case 0:
@@ -177,17 +211,21 @@ int main() {
                         break;
                 }
             }
-            *p++ = '\n';
+            *p++ = LINE_BREAK_CHAR;
         }
         
         *p = '\0';
         
-        printf("\033[H");
-        printf("%s", frame);
+        printf("\033[H"); // bring cursor to home position
+        printf("%s", frame); // print out the entire frame at once
 
-        Sleep(REFRESH_SPEED);
+        sleep(REFRESH_SPEED);
     }
 
     free(frame);
+    free(velocities);
+    free(heads);
+    free(tails);
+
     return 0;
 }
