@@ -29,6 +29,6 @@ bool GetConsoleSize(int *rows, int *columns) {
     return true;
 }
 
-void sleep(DWORD milliseconds) {
+void sleep(int milliseconds) {
     Sleep(milliseconds);
 }
