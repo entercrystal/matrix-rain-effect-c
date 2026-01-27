@@ -9,7 +9,7 @@
 
 #define PRINT_CHAR "*"
 #define LINE_BREAK_CHAR '\n'
-#define RANDOM_CHARACTERS true // true = random characters insteada of print_char, false = print_char only
+#define RANDOM_CHARACTERS true // true = random characters instead of print_char, false = print_char only
 
 // #define CLEAR_CHARACTER "\033[H"
 
