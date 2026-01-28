@@ -37,6 +37,8 @@
 #define SPEED_CHANGE_CHANCE_ENABLED true
 #define SPEED_CHANGE_CHANCE 500 // 1 in X chance per frame of receiving a speed increase for each drop
 
+#define SHOW_FPS true // enable or disable fps counter
+
 int ranint(int min, int max) {
     if (min > max) return -1;
     if (min == max) return min;
@@ -233,6 +235,7 @@ int main() {
         
         last_time = current_time;
         // printf("Delta time: %.4f seconds\n", delta); // for debugging
+        printf(SHOW_FPS ? "FPS: %d\n" : "", (int) (1 / delta));
     }
 
     free(frame);
