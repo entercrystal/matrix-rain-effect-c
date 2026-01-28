@@ -90,9 +90,9 @@ int main() {
     float delta = 0.0f;
     clock_t last_time = clock();
 
-    const int frame_size = ROWS * COLUMNS * 75 + ROWS + 1;
+    const int starting_frame_size = ROWS * COLUMNS * 75 + ROWS + 1;
     
-    char *frame = malloc(frame_size); // + 1 for the null terminator
+    char *frame = malloc(starting_frame_size); // + 1 for the null terminator
     frame[0] = '\0'; // initialise as empty string
 
     while (true) {
@@ -118,6 +118,11 @@ int main() {
                 tails[column] = heads[column] - ranint(LENGTH_MIN, LENGTH_MAX);
             }
             
+            free(frame);
+
+            const int frame_size = ROWS * COLUMNS * 75 + ROWS + 1;
+            frame = malloc(frame_size); // + 1 for the null terminator
+
             frame[0] = '\0'; // initialise as empty string
             ClearConsole();
         }
