@@ -22,16 +22,17 @@
 #define BLACK        "\033[30m"   // optional, just in case
 #define RESET "\033[0m"
 
-#define REFRESH_SPEED 20 // milliseconds
+#define REFRESH_SPEED 8 // milliseconds, 20
+#define GRAVITY 5.0f // row per second squared (gravity acceleration, put 0 to disable gravity effect)
 
 #define LENGTH_MIN 6
 #define LENGTH_MAX 11
 
-#define HEAD_FRAMES_MIN 2.0f
-#define HEAD_FRAMES_MAX 5.0f
+#define HEAD_FRAMES_MIN 2.0f // 2.0f
+#define HEAD_FRAMES_MAX 12.5f // 5.0f
 
-#define DROP_VELOCITY_MIN 3.0f // min velocity (higher = faster)
-#define DROP_VELOCITY_MAX 17.5f // max velocity (higher = faster)
+#define DROP_VELOCITY_MIN 6.0f // min velocity (higher = faster), 3.0f
+#define DROP_VELOCITY_MAX 22.5f // max velocity (higher = faster), 17.5f
 
 #define SPEED_CHANGE_CHANCE_ENABLED true
 #define SPEED_CHANGE_CHANCE 500 // 1 in X chance per frame of receiving a speed increase for each drop
@@ -49,7 +50,7 @@ float ranfloat(float min, float max) {
 }
 
 int main() {
-    setvbuf(stdout, NULL, _IONBF, 0); // disable stdout buffering
+    setvbuf(stdout, NULL, _IOFBF, 0); // switch to full buffering mode
     ClearConsole();
     
     printf("Green Modern Matrix Rain Effect Generator\nEnter a valid seed (integer, 0 for default): ");
@@ -84,7 +85,8 @@ int main() {
     }
 
     EnableANSI();
-    float delta = REFRESH_SPEED / 1000.0f * 3.0f;
+    float delta = 0.0f;
+    clock_t last_time = clock();
 
     const int frame_size = ROWS * COLUMNS * 75 + ROWS + 1;
     
@@ -127,6 +129,10 @@ int main() {
 
             heads[column] += vel; // update positions according to velocity and delta time
             tails[column] += vel;
+
+            if (GRAVITY > 0.0f) {
+                velocities[column] += GRAVITY * delta; // apply gravity effect (acceleration) if enabled
+            }
 
             if (heads[column] < 0 && tails[column] < 0) continue; // the head and tail are out of bounds, so we skip it completely
             if (heads[column] > ROWS - 1 && tails[column] > ROWS - 1) {
@@ -219,7 +225,14 @@ int main() {
         printf("\033[H"); // bring cursor to home position
         printf("%s", frame); // print out the entire frame at once
 
+        fflush(stdout);
         sleep(REFRESH_SPEED);
+        
+        clock_t current_time = clock();
+        delta = (float)(current_time - last_time) / CLOCKS_PER_SEC;
+        
+        last_time = current_time;
+        // printf("Delta time: %.4f seconds\n", delta); // for debugging
     }
 
     free(frame);
