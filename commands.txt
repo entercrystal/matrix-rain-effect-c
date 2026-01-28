@@ -1,1 +1,0 @@
-Compile for windows (gcc) -> gcc matrix_rain.c plat_abs/platform_win.c -o matrix_rain
