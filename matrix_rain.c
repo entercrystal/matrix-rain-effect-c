@@ -37,7 +37,7 @@
 #define SPEED_CHANGE_CHANCE_ENABLED true
 #define SPEED_CHANGE_CHANCE 500 // 1 in X chance per frame of receiving a speed increase for each drop
 
-#define SHOW_FPS true // enable or disable fps counter
+#define SHOW_FPS false // enable or disable fps counter
 
 int ranint(int min, int max) {
     if (min > max) return -1;
