@@ -3,16 +3,20 @@
 
 #include <time.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+
 #include "tools.h"
 
-#define PRINT_CHAR "*"
+#define PRINT_CHAR "*" // character to print if RANDOM_CHARACTERS is false
 #define LINE_BREAK_CHAR '\n'
 #define RANDOM_CHARACTERS true // true = random characters instead of print_char, false = print_char only
 
-// #define CLEAR_CHARACTER "\033[H"
+#define RANDOM_CHARACTERS_USE_FIXED_SET false // if RANDOM_CHARACTERS is true, set this to true as well in order to use a fixed set of characters instead of fully random ASCII characters
+#define RANDOM_FIXED_CHARACTER_SET "@#/.,^&*()[]{}<>~!?\\|" // random character set if both RANDOM_CHARACTERS and RANDOM_CHARACTERS_USE_FIXED_SET are true
 
+#define CLEAR_CHARACTER "\033[H" // ANSI escape code to clear the console
 #define WHITE        "\033[97m"
 #define BRIGHT_GREEN "\033[92m"  // almost neon
 #define GREEN1       "\033[32;1m" // bright-ish green
@@ -22,11 +26,8 @@
 #define BLACK        "\033[30m"   // optional, just in case
 #define RESET "\033[0m"
 
-#define REFRESH_SPEED 8 // milliseconds, 20
-#define GRAVITY 5.0f // row per second squared (gravity acceleration, put 0 to disable gravity effect)
-
-#define LENGTH_MIN 6
-#define LENGTH_MAX 11
+#define LENGTH_MIN 6 // minimum length of a rain drop
+#define LENGTH_MAX 11 // maximum length of a rain drop
 
 #define HEAD_FRAMES_MIN 2.0f // 2.0f
 #define HEAD_FRAMES_MAX 12.5f // 5.0f
@@ -37,7 +38,10 @@
 #define SPEED_CHANGE_CHANCE_ENABLED true
 #define SPEED_CHANGE_CHANCE 500 // 1 in X chance per frame of receiving a speed increase for each drop
 
+#define FRAMERATE 120 // average framerate target (higher = smoother, but more CPU usage)
 #define SHOW_FPS false // enable or disable fps counter
+
+#define GRAVITY 5.0f // row per second squared (gravity acceleration, put 0 to disable gravity effect)
 
 int ranint(int min, int max) {
     if (min > max) return -1;
@@ -52,6 +56,10 @@ float ranfloat(float min, float max) {
 }
 
 int main() {
+    const float FRAMERATE_FLOAT = 1 / (float) FRAMERATE * 1000.0f;
+    const int REFRESH_SPEED = (int) (FRAMERATE_FLOAT); // in milliseconds
+    // printf("Refresh speed set to %d ms (%d FPS target)\n", REFRESH_SPEED, FRAMERATE); // for debugging
+    
     setvbuf(stdout, NULL, _IOFBF, 0); // switch to full buffering mode
     ClearConsole();
     
@@ -173,8 +181,13 @@ int main() {
 
                 char USE_CHAR[3];
                 
-                if (RANDOM_CHARACTERS) sprintf(USE_CHAR, "%c", (char)ranint(33, 126));
-                else sprintf(USE_CHAR, "%s", PRINT_CHAR);
+                if (RANDOM_CHARACTERS)
+                    if (!RANDOM_CHARACTERS_USE_FIXED_SET)
+                        sprintf(USE_CHAR, "%c", (char)ranint(33, 126));
+                    else
+                        sprintf(USE_CHAR, "%c", RANDOM_FIXED_CHARACTER_SET[ranint(0, (int)strlen(RANDOM_FIXED_CHARACTER_SET) - 1)]);
+                else
+                    sprintf(USE_CHAR, "%s", PRINT_CHAR);
                 
                 switch (character) {
                     /* CODES:
@@ -229,7 +242,7 @@ int main() {
         
         *p = '\0';
         
-        printf("\033[H"); // bring cursor to home position
+        printf(CLEAR_CHARACTER); // bring cursor to home position
         printf("%s", frame); // print out the entire frame at once
 
         fflush(stdout);
